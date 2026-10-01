@@ -73,6 +73,17 @@ STREMIOSRV_SEED_ON_COMPLETE=false
 STREMIOSRV_ENABLE_UPNP=false
 ```
 
+### Web Player authentication
+
+The bundled Web Player/API supports **HTTP Basic Authentication** through the base image. Set:
+
+```env
+USERNAME=seu-usuario
+PASSWORD=sua-senha
+```
+
+When enabled, the Web Player and its proxied API routes require those credentials. The **`/library/` path is deliberately exempt** from Basic Auth because the Library UI has its own Stremio-account session authentication; enabling Web Player authentication therefore does not add a second login layer to the Library.
+
 Do not set `IPADDRESS` on Coolify when Coolify is terminating HTTPS for the public domain.
 
 ### 4. Storage
@@ -254,6 +265,8 @@ Everything is a plain `-e NAME=value` environment variable:
 |---|---|---|
 | `IPADDRESS` | *(unset)* | Used only by the certificate path `*.stremio.rocks`; leave unset on Coolify. |
 | `SERVER_URL` | *(Coolify: defina)* | Public URL used by the Web Player. Ex.: `https://stremio.exemplo.com`. |
+| `USERNAME` | *(unset)* | Optional HTTP Basic Authentication username for the Web Player/API. Leave unset to disable Basic Auth. |
+| `PASSWORD` | *(unset)* | Optional HTTP Basic Authentication password paired with `USERNAME`. |
 | `STREMIOSRV_CACHE_SIZE` | `10GB` no preset Coolify | Download cache budget. Adjust it in Coolify; keep it above the largest file you expect to download. |
 | `STREMIOSRV_CACHE_EVICT_GRACE` | `1800` | Seconds a torrent stays safe from eviction after it was last served. Raise it if a player buffers long enough between range requests that the title being watched ages out. |
 | `STREMIOSRV_RESUME_RETENTION_DAYS` | `365` | How long a fast-resume record is kept for a title that has left the cache. The record carries the torrent's metadata, so re-playing an evicted title starts without fetching it from the swarm again — this only bounds the directory. A title still cached, kept, or downloading is exempt at any age. `0` keeps everything. |
