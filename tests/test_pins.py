@@ -22,10 +22,6 @@ def test_load_pins_missing_returns_empty(tmp_path):
     assert pins.pinned_hashes(str(tmp_path)) == set()
 
 
-def test_headroom_is_cache_size_plus_10_percent():
-    assert pins.headroom(1000) == 1100
-
-
 def test_name_index_roundtrip(tmp_path):
     mapping = {"movie.mkv": "deadbeef01", "show.mkv": "cafebabe02"}
     save_name_index(str(tmp_path), mapping)
@@ -36,14 +32,13 @@ def test_name_index_missing_returns_empty(tmp_path):
     assert load_name_index(str(tmp_path)) == {}
 
 
-def test_pin_fits_truth_table():
-    # cache_size=1000 -> R=1100
-    # free 5000, no existing pins, candidate needs 3000 -> 5000-3000=2000 >= 1100 -> fits
-    assert pins.pin_fits(5000, 0, 3000, 1000) is True
-    # free 5000, existing pins need 3000, candidate needs 1000 -> 5000-4000=1000 < 1100 -> no
-    assert pins.pin_fits(5000, 3000, 1000, 1000) is False
-    # candidate alone too big
-    assert pins.pin_fits(2000, 0, 1500, 1000) is False
+def test_pin_fits_checks_only_actual_pin_bytes():
+    # A 3 GB candidate fits in 26 GB free, regardless of the normal cache budget.
+    assert pins.pin_fits(26_000, 0, 3_000) is True
+    # Existing incomplete pins and the candidate both consume physical free space.
+    assert pins.pin_fits(5_000, 3_000, 1_000) is True
+    assert pins.pin_fits(3_999, 3_000, 1_000) is False
+    # The cache budget is intentionally absent from this guard because ordinary cache is evictable.
 
 
 def test_pinning_marks_every_file_wanted_not_just_every_piece():
