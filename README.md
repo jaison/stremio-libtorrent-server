@@ -254,11 +254,11 @@ stay on the page, because the addon protocol has no way to express an action.
 
 **Installing it — four steps:**
 
-1. Start the server with `STREMIOSRV_LIBRARY_UI=true` (it is off by default, and so is the addon).
-2. Open **`https://<your-server>:12470/library/`** and sign in with your Stremio account.
+1. No preset do Coolify, `STREMIOSRV_LIBRARY_UI=true` já vem habilitado.
+2. Abra **`https://<seu-domínio>/library/`** e entre com sua conta Stremio.
 3. At the top of that page, under **"Watch this library in Stremio"**, press **Copy**. That
    gives you a URL of the shape
-   `https://<your-server>:12470/library/addon/<token>/manifest.json` — the token is unique to your
+   `https://<seu-domínio>/library/addon/<token>/manifest.json` — the token is unique to your
    server, and the URL **must end in `/manifest.json`**.
 4. In Stremio: **Addons → Add addon**, paste, install.
 
