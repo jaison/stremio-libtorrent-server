@@ -39,6 +39,11 @@ services:
       # configured for the 8080 service, e.g. https://stremio.example.com.
       SERVER_URL: ${SERVER_URL:-}
 
+      # Optional HTTP Basic authentication for the Web Player/API. The /library/ path is
+      # deliberately exempt in nginx because the Library UI has its own Stremio-account auth.
+      USERNAME: ${USERNAME:-}
+      PASSWORD: ${PASSWORD:-}
+
       # Recommended library deployment settings.
       STREMIOSRV_CACHE_SIZE: "${STREMIOSRV_CACHE_SIZE:-10GB}"
       STREMIOSRV_LIBRARY_UI: "${STREMIOSRV_LIBRARY_UI:-true}"
