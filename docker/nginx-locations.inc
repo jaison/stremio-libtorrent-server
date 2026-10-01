@@ -65,7 +65,10 @@ location ^~ /library           { proxy_pass http://127.0.0.1:11470; }
 # It used to get index.html -- 200 for a GET, 405 for a POST -- which is how a missing route stayed
 # invisible for months (issue #3). The allowlist above remains the security boundary: every
 # unmatched path lands on the one fixed route below, so none can reach an origin-only route.
-location / { try_files $uri $uri/ @unmatched; }
+location / {
+    include /etc/nginx/auth.conf;
+    try_files $uri $uri/ @unmatched;
+}
 location @unmatched {
     # Declaring proxy_set_header here drops the inherited ones; /_unmatched reads only the two below.
     # A client's own X-Forwarded-For would then pass through, and uvicorn believes that header from
