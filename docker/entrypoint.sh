@@ -150,6 +150,23 @@ fi
 # sets SERVER_URL inside this script, and uvicorn sees only what is exported.
 export SERVER_URL
 
+# 3) Configure the optional HTTP Basic Authentication used by the Web Player.
+# Keep /library outside this layer: the Library UI authenticates against the owner's Stremio account.
+AUTH_CONF_FILE=/etc/nginx/auth.conf
+HTPASSWD_FILE=/etc/nginx/.htpasswd
+: > "$AUTH_CONF_FILE"
+if [ -n "${USERNAME:-}" ] && [ -n "${PASSWORD:-}" ]; then
+    echo "[auth] Setting up HTTP Basic Authentication for the Web Player..."
+    if ! htpasswd_msg=$(htpasswd -bc "$HTPASSWD_FILE" "$USERNAME" "$PASSWORD" 2>&1); then
+        echo "[auth] $htpasswd_msg"
+        exit 1
+    fi
+    echo 'auth_basic "Restricted Content";' > "$AUTH_CONF_FILE"
+    echo 'auth_basic_user_file '"$HTPASSWD_FILE"';' >> "$AUTH_CONF_FILE"
+else
+    echo "[auth] HTTP Basic Authentication disabled."
+fi
+
 # 3) Run uvicorn (API, internal :11470) + nginx (web player + API proxy on :8080 and :12470).
 mkdir -p /tmp/nx-proxy /tmp/nx-body
 # Render the cert path into the nginx config (honors a custom STREMIOSRV_CACHE_ROOT).
