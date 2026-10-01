@@ -18,6 +18,10 @@ services:
       # *.stremio.rocks). Leave empty to use a bring-your-own cert or self-signed.
       IPADDRESS: ${IPADDRESS:-}
       SERVER_URL: ${SERVER_URL:-}    # web-player target; auto-set to the stremio.rocks URL when IPADDRESS is set
+      # Recommended library deployment settings; override them in .env when needed.
+      STREMIOSRV_CACHE_SIZE: "${STREMIOSRV_CACHE_SIZE:-10GB}"
+      STREMIOSRV_LIBRARY_UI: "${STREMIOSRV_LIBRARY_UI:-true}"
+      STREMIOSRV_SEED_ON_COMPLETE: "${STREMIOSRV_SEED_ON_COMPLETE:-false}"
     ports:
       - "8080:8080"                  # web player + API (HTTP/LAN)
       - "11470:11470"              # streaming-server HTTP API
