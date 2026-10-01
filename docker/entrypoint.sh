@@ -6,6 +6,74 @@ set -e
 CACHE="${STREMIOSRV_CACHE_ROOT:-/root/.stremio-server}"
 CERT="$CACHE/${CERT_FILE:-certificates.pem}"
 
+# Optional BitTorrent-only WireGuard split tunnel.
+# The web/API processes keep using eth0. libtorrent is bound to WG_IF, and source-policy routing
+# sends only the WireGuard addresses through the tunnel. The unreachable fallback is the kill
+# switch: if the WG device route disappears, torrent traffic cannot fall back to eth0.
+WG_IF="${STREMIOSRV_BT_INTERFACE:-}"
+WG_CONF="${STREMIOSRV_WIREGUARD_CONFIG:-/etc/wireguard/stremio.conf}"
+WG_TABLE=51820
+WG_RUNTIME=""
+WG_ENABLED=0
+WG_IPV4=""
+WG_IPV6=""
+
+cleanup_wireguard() {
+    if [ "$WG_ENABLED" = "1" ]; then
+        [ -z "$WG_IPV4" ] || ip -4 rule del pref 100 from "${WG_IPV4}/32" lookup "$WG_TABLE" 2>/dev/null || true
+        [ -z "$WG_IPV6" ] || ip -6 rule del pref 100 from "${WG_IPV6}/128" lookup "$WG_TABLE" 2>/dev/null || true
+        ip -4 route flush table "$WG_TABLE" 2>/dev/null || true
+        ip -6 route flush table "$WG_TABLE" 2>/dev/null || true
+        [ -z "$WG_RUNTIME" ] || wg-quick down "$WG_RUNTIME" 2>/dev/null || true
+        WG_ENABLED=0
+    fi
+}
+
+if [ -n "$WG_IF" ]; then
+    case "$WG_IF" in
+        *[!A-Za-z0-9_.-]*|????????????????*) echo "[wireguard] invalid interface name: $WG_IF"; exit 1 ;;
+    esac
+    [ -f "$WG_CONF" ] || { echo "[wireguard] config not found: $WG_CONF"; exit 1; }
+
+    # Keep container DNS on eth0. Routes are also installed explicitly so AllowedIPs=0.0.0.0/0
+    # does not replace the normal default route for the rest of the container.
+    WG_RUNTIME="/tmp/${WG_IF}.conf"
+    awk '
+        /^[[:space:]]*DNS[[:space:]]*=/  { next }
+        /^[[:space:]]*Table[[:space:]]*=/ { next }
+        /^\[Interface\]/ {
+            print
+            print "Table = off"
+            next
+        }
+        { print }
+    ' "$WG_CONF" > "$WG_RUNTIME"
+    chmod 600 "$WG_RUNTIME"
+
+    echo "[wireguard] starting $WG_IF for BitTorrent only"
+    wg-quick up "$WG_RUNTIME"
+    WG_ENABLED=1
+    trap cleanup_wireguard EXIT INT TERM
+
+    WG_IPV4="$(ip -4 -o addr show dev "$WG_IF" scope global | awk 'NR==1 {print $4}' | cut -d/ -f1)"
+    WG_IPV6="$(ip -6 -o addr show dev "$WG_IF" scope global | awk 'NR==1 {print $4}' | cut -d/ -f1)"
+    [ -n "$WG_IPV4" ] || { echo "[wireguard] no IPv4 address on $WG_IF"; exit 1; }
+
+    # The active WG route has a lower metric. The unreachable default remains as a fail-closed
+    # guard if the device route disappears, preventing policy lookup from falling through to eth0.
+    ip -4 route add unreachable default metric 42700 table "$WG_TABLE"
+    ip -4 route add default dev "$WG_IF" metric 100 table "$WG_TABLE"
+    ip -4 rule add pref 100 from "${WG_IPV4}/32" lookup "$WG_TABLE"
+
+    if [ -n "$WG_IPV6" ]; then
+        ip -6 route add unreachable default metric 42700 table "$WG_TABLE"
+        ip -6 route add default dev "$WG_IF" metric 100 table "$WG_TABLE"
+        ip -6 rule add pref 100 from "${WG_IPV6}/128" lookup "$WG_TABLE"
+    fi
+
+    echo "[wireguard] $WG_IF up: ipv4=$WG_IPV4 ipv6=${WG_IPV6:-disabled} table=$WG_TABLE"
+fi
+
 # 1) TLS cert for HTTPS :12470. TVs require a TRUSTED cert; priority:
 #    a. IPADDRESS set -> fetch/refresh a trusted Let's Encrypt *.stremio.rocks cert (TV-compatible,
 #       zero config; the dashed-IP subdomain resolves to your IP via Stremio's magic DNS).
