@@ -6,7 +6,7 @@ FROM tsaridas/stremio-docker:latest
 # The entrypoint generates a self-signed TLS certificate when no trusted certificate is provided.
 # The upstream image does not install the openssl CLI explicitly.
 # curl is required by the Docker HEALTHCHECK below.
-RUN apk add --no-cache openssl curl wireguard-tools
+RUN apk add --no-cache openssl curl wireguard-tools apache2-utils
 
 # uv (standalone binary; brings its own Python toolchain)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
@@ -19,8 +19,7 @@ COPY docker ./docker
 
 # Pin Python 3.12: libtorrent 2.0.11 publishes cp312/cp313 wheels and the project requires >=3.12.
 RUN uv sync --no-dev --python 3.12 \
-    && chmod +x docker/entrypoint.sh docker/launch.sh docker/patch-nginx-library-auth.sh \
-    && docker/patch-nginx-library-auth.sh
+    && chmod +x docker/entrypoint.sh docker/launch.sh
 
 ENV STREMIOSRV_CACHE_ROOT=/root/.stremio-server
 ENV PATH="/srv/app/.venv/bin:${PATH}"
