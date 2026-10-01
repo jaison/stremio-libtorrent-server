@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 
     http_port: int = 11470
     bt_listen_port: int = 6881
+    # Bind BitTorrent sockets to this interface when set. Empty preserves the normal all-interface listener.
+    bt_interface: str = ""
     # Ask the router to auto-forward the BT port via UPnP and NAT-PMP. false stops both — useful when
     # nothing is forwarded on purpose (LAN-only) or the traffic is tunnelled, so the mapping is noise.
     enable_upnp: bool = True
