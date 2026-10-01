@@ -976,21 +976,25 @@ class Engine:
         wantedmod.drop(self._cache_root, ih)
 
     def pin(self, info_hash: str) -> dict:
-        """Keep this torrent: exempt from eviction, every file, seeded. Manual only.
+        """Keep this title: exempt it from eviction and keep seeding. Manual only.
 
-        Deliberately whole-title, and deliberately not something a download does on your behalf --
-        the appliance's own pin control means exactly this, and consistency between the two is
-        worth more than a cleverer per-file rule.
+        A pin never reserves the normal cache budget as permanently free disk. Cache entries are
+        evictable; the pinned bytes are not. The guard therefore checks only the bytes still needed
+        to finish existing incomplete pins plus this candidate. This lets a small film be kept when
+        the disk is not empty but still has enough room for the film itself.
         """
         ih = info_hash.lower()
         h = self.get(info_hash) or self.add(info_hash)
-        # disk guard: existing incomplete pins + this candidate must still leave headroom
+        # disk guard: existing incomplete pins + this candidate must fit in currently free disk.
+        # Ordinary cache is intentionally not included because the evictor may reclaim it to make
+        # room for a pin.
         free = shutil.disk_usage(self._cache_root).free
         pinned_remaining = sum(self._remaining_bytes(self._torrents[p])
                                for p in self._pinned if p in self._torrents and p != ih)
         candidate_remaining = self._remaining_bytes(h)
-        if not pinsmod.pin_fits(free, pinned_remaining, candidate_remaining, self._cache_size):
-            raise PinSpaceError(pinsmod.headroom(self._cache_size), free)
+        needed = pinned_remaining + candidate_remaining
+        if not pinsmod.pin_fits(free, pinned_remaining, candidate_remaining):
+            raise PinSpaceError(needed, free)
         self._pinned.add(ih)
         h.pinned = True
         if h.has_metadata():
