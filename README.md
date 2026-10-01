@@ -24,11 +24,11 @@ continue seeding.
 
 ## 🚀 Quick Start — Coolify
 
-Use o **Docker Compose** diretamente deste repositório.
+Use **Docker Compose** directly from this repository.
 
-### 1. Criar a aplicação
+### 1. Create the application
 
-Em um projeto do Coolify, crie uma aplicação a partir de:
+In a Coolify project, create an application from:
 
 ```text
 jaison/stremio-libtorrent-server
@@ -40,13 +40,13 @@ Base Directory: /
 
 ### 2. Domínio
 
-Associe seu domínio à porta interna **8080**:
+Point your public domain to the internal **8080** port:
 
 ```text
 https://stremio.seudominio.com  →  8080
 ```
 
-O HTTPS externo é terminado pelo proxy do Coolify.
+Coolify terminates the external HTTPS connection.
 
 ### 3. Environment Variables
 
@@ -76,13 +76,13 @@ Do not set `IPADDRESS` on Coolify when Coolify is terminating HTTPS for the publ
 
 ### 4. Storage
 
-O volume persistente já está declarado no Compose:
+The persistent volume is already declared in Compose:
 
 ```yaml
 stremio-cache:/root/.stremio-server
 ```
 
-Não é necessário criar esse mount manualmente no painel.
+No manual storage mount is required in the panel.
 
 ### 5. BitTorrent
 
@@ -107,23 +107,23 @@ The WireGuard config is mounted read-only from the host and should never be comm
 /root/stremio.conf -> /etc/wireguard/stremio.conf
 ```
 
-### 6. Abrir
+### 6. Open
 
-Depois do deploy:
+After deployment:
 
 ```text
 https://stremio.seudominio.com/
 https://stremio.seudominio.com/library/
 ```
 
-Para a configuração completa do Coolify, veja [`docs/COOLIFY.md`](docs/COOLIFY.md).
+For the complete Coolify setup, see [`docs/COOLIFY.md`](docs/COOLIFY.md).
 
 ---
 
 ### Docker fora do Coolify
 
-O projeto continua compatível com Docker Compose convencional e com os overlays de GPU.
-A configuração principal permanece em [`compose.yaml`](compose.yaml).
+The project also works with conventional Docker Compose and the GPU overlays.
+The main configuration remains in [`compose.yaml`](compose.yaml).
 
 ## 🧰 Minimum hardware
 
@@ -131,9 +131,9 @@ It's light — direct play (most content) barely touches the CPU; the GPU only m
 
 | Resource | Minimum | Recommended | Notes |
 |---|---|---|---|
-| **CPU** | 2 cores, x86-64 | 4+ cores | `amd64` only. Transcoding (clients that can't direct-play) is the only heavy load. |
+| **CPU** | 2 cores, x86-64 or ARM64 | 4+ cores | Transcoding (clients that can't direct-play) is the main heavy workload. |
 | **RAM** | 1 GB | 2 GB+ | Engine + buffers + nginx; transcoding adds ~0.5–1 GB. |
-| **Disk** | ~3 GB + cache | SSD, cache ≥ largest file | Image ~1.5 GB; download cache defaults to **18 GiB** (tune with `STREMIOSRV_CACHE_SIZE`). Keep free space ≥ your biggest single file. |
+| **Disk** | ~3 GB + cache | SSD, cache ≥ largest file | Image size depends on the base; download cache defaults to **10GB** (tune with `STREMIOSRV_CACHE_SIZE`). Keep free space ≥ your biggest single file. |
 | **GPU** | none | Intel VAAPI / NVIDIA NVENC | Optional — only speeds up transcoding; a missing/broken GPU never blocks startup. |
 | **Network** | any | wired + `6881` forwarded | Wired beats Wi-Fi for 4K; forward port `6881` for the full swarm (see below). |
 
