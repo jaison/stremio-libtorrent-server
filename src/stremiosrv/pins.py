@@ -39,15 +39,15 @@ def pinned_hashes(cache_root: str) -> set[str]:
     return {e["infoHash"].lower() for e in load_pins(cache_root) if e.get("infoHash")}
 
 
-def headroom(cache_size: int) -> int:
-    """Bytes to keep free for normal streaming: cache budget + 10%."""
-    return math.ceil(cache_size * 1.10)
+def pin_fits(disk_free: int, pinned_remaining: int, candidate_remaining: int) -> bool:
+    """True if the disk can accommodate all bytes still required by the existing pins plus candidate.
 
-
-def pin_fits(disk_free: int, pinned_remaining: int, candidate_remaining: int,
-             cache_size: int) -> bool:
-    """True if completing all pins (existing incomplete + candidate) still leaves >= headroom free."""
-    return disk_free - (pinned_remaining + candidate_remaining) >= headroom(cache_size)
+    The normal cache is intentionally NOT reserved here. It is evictable by design, while a pin is
+    not. Reserving the entire cache budget as permanently free space made Keep reject small titles
+    even when the disk had plenty of capacity: a 3 GiB film could be refused because a 30 GiB cache
+    budget was configured. The cache evictor can reclaim ordinary cache entries when a pin needs room.
+    """
+    return disk_free >= pinned_remaining + candidate_remaining
 
 
 # --- which file a pin wants -------------------------------------------------------------------
