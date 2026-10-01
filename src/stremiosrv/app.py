@@ -221,6 +221,7 @@ def build_app() -> FastAPI:
     tracker_source.start()
     engine = Engine(
         listen_port=settings.bt_listen_port,
+        bt_interface=settings.bt_interface,
         cache_root=settings.cache_root,
         max_connections=settings.bt_max_connections,
         download_rate_limit=settings.download_rate_limit,
