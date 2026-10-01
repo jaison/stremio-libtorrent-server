@@ -1,25 +1,26 @@
 # 🎬 stremio-libtorrent-server
 
-### Seu servidor Stremio pessoal, com armazenamento local persistente e controle sobre o torrent.
+### Your personal Stremio server, with persistent local storage and full control over BitTorrent.
 
-Este fork é preparado principalmente para **Coolify**: o Web Player, a Library UI e o motor
-BitTorrent rodam no mesmo container, com volume persistente e configuração declarativa em
+This fork is primarily prepared for **Coolify**: the Web Player, Library UI, and open BitTorrent
+engine run in the same container, with persistent storage and declarative configuration in
 `compose.yaml`.
 
-É um **cliente torrent completo**, não apenas um streamer: pode baixar arquivos para o servidor,
-manter títulos escolhidos com **Keep** e reproduzi-los pelo Stremio. No preset deste fork, downloads
-terminados **não continuam em seeding automaticamente**; itens marcados como Keep continuam sendo
-mantidos e podem continuar compartilhando.
+It is a **full torrent client**, not just a streamer: it can download files to the server, keep
+selected titles with **Keep**, and play them through Stremio. In the preset used here, completed
+downloads **do not continue seeding automatically**; items marked with Keep remain retained and may
+continue seeding.
 
-## ✨ O que este fork entrega
+## ✨ What this fork delivers
 
-- **☁️ Pronto para Coolify.** O `compose.yaml` define serviço, volume persistente, healthcheck e a porta BitTorrent.
-- **📺 Web Player integrado.** O Stremio Web roda no mesmo domínio configurado no Coolify.
-- **📚 Library UI habilitada.** Baixe títulos antes de assistir, acompanhe episódios e use **Keep** para protegê-los da limpeza do cache.
-- **💾 Cache controlado.** O preset começa com `STREMIOSRV_CACHE_SIZE=10GB`.
-- **🛑 Sem seeding automático.** `STREMIOSRV_SEED_ON_COMPLETE=false` no preset; Keep é a ação explícita para manter um item.
-- **⚡ libtorrent aberto.** Inbound peers, download sequencial orientado ao playhead e controle fino do comportamento.
-- **🖥️ Transcode opcional.** CPU por padrão, com VAAPI/NVENC quando o host/container fornecer a aceleração.
+- **☁️ Coolify-ready.** `compose.yaml` defines the service, persistent volume, healthcheck, WireGuard support, and BitTorrent port.
+- **📺 Integrated Web Player.** Stremio Web runs on the same public domain configured in Coolify.
+- **📚 Library UI enabled.** Download titles before watching, track episodes, and use **Keep** to protect them from cache eviction.
+- **💾 Controlled cache.** The Coolify preset starts with `STREMIOSRV_CACHE_SIZE=10GB`.
+- **🛑 No automatic seeding.** `STREMIOSRV_SEED_ON_COMPLETE=false` in the preset; Keep is the explicit action for retained titles.
+- **🔐 BitTorrent-only WireGuard.** BitTorrent traffic can be forced through a WireGuard interface while the Web/API path stays on the normal network interface, with a fail-closed route.
+- **⚡ Open libtorrent engine.** Inbound peers, playhead-aware piece fetching, DHT, trackers, and fine-grained torrent control.
+- **🖥️ Optional transcoding.** CPU by default, with VAAPI/NVENC when acceleration is provided to the container.
 
 ## 🚀 Quick Start — Coolify
 
@@ -49,13 +50,20 @@ O HTTPS externo é terminado pelo proxy do Coolify.
 
 ### 3. Environment Variables
 
-O `compose.yaml` já traz os defaults deste fork. No Coolify, defina apenas o domínio público:
+The `compose.yaml` already contains the fork's recommended defaults. At minimum, set the public origin:
 
 ```env
-SERVER_URL=https://stremio.seudominio.com
+SERVER_URL=https://stremio.example.com
 ```
 
-Os defaults são:
+For the BitTorrent-only WireGuard setup used by this deployment, also set:
+
+```env
+STREMIOSRV_BT_INTERFACE=stremio-test
+STREMIOSRV_WIREGUARD_HOST_PATH=/root/stremio.conf
+```
+
+Recommended defaults:
 
 ```env
 STREMIOSRV_CACHE_SIZE=10GB
@@ -64,7 +72,7 @@ STREMIOSRV_SEED_ON_COMPLETE=false
 STREMIOSRV_ENABLE_UPNP=false
 ```
 
-Não configure `IPADDRESS` no Coolify.
+Do not set `IPADDRESS` on Coolify when Coolify is terminating HTTPS for the public domain.
 
 ### 4. Storage
 
@@ -78,14 +86,26 @@ Não é necessário criar esse mount manualmente no painel.
 
 ### 5. BitTorrent
 
-O Compose publica:
+The Compose file publishes:
 
 ```text
 6881/TCP
 6881/UDP
 ```
 
-Essas portas permitem inbound peers. Playback e downloads também funcionam sem inbound.
+These ports provide inbound peer connectivity when the network path and VPN provider support it.
+Playback and downloads also work with outbound-only connectivity.
+
+When `STREMIOSRV_BT_INTERFACE` is set, libtorrent binds its BitTorrent sockets to that interface.
+The container entrypoint installs source-policy routing for the WireGuard address and keeps the normal
+`eth0` path for the Web Player/API. If the WireGuard route disappears, the policy table falls back
+to an unreachable route instead of leaking torrent traffic through `eth0`.
+
+The WireGuard config is mounted read-only from the host and should never be committed to Git:
+
+```text
+/root/stremio.conf -> /etc/wireguard/stremio.conf
+```
 
 ### 6. Abrir
 
@@ -121,11 +141,17 @@ It's light — direct play (most content) barely touches the CPU; the GPU only m
 
 ## 📺 On your TV
 
-Smart TVs insist on a **trusted** HTTPS connection — a self-signed cert won't do. Set `IPADDRESS`
-and this server fetches a real Let's Encrypt certificate for you automatically (via Stremio's
-`*.stremio.rocks` magic DNS, which maps that long URL back to your server's IP — even on your LAN).
-In the TV's Stremio app, set the **Streaming Server URL** to the `…stremio.rocks:12470` address shown
-by `docker logs stremio`.
+For a Coolify deployment, let Coolify terminate HTTPS on your public domain and point the TV's
+Stremio **Streaming Server URL** at:
+
+```text
+https://stremio.example.com/
+```
+
+The TV does not need WireGuard. The VPN exists entirely on the server side: only the server's
+BitTorrent traffic is tunneled, while the TV continues to use its normal internet connection.
+
+For direct Docker deployments using the bundled Stremio HTTPS port, see the certificate notes below.
 
 > **Note — the Stremio _desktop_ app (v6).** The desktop shell launches its own bundled streaming
 > server and re‑points itself at `127.0.0.1:11470` on **every** start — it injects a
@@ -161,22 +187,49 @@ your server. It works fine without forwarding — you'll just reach fewer peers 
 
 ---
 
-## 🔐 Run behind a VPN
+## 🔐 Run BitTorrent through WireGuard
 
-Tunnel only the streaming server's BitTorrent traffic through a VPN (kill-switch + optional
-port-forwarding) using [gluetun](https://github.com/qdm12/gluetun), while your LAN keeps reaching the
-player/admin directly:
+The main Compose deployment supports a **BitTorrent-only WireGuard split tunnel**. The application
+container creates the WireGuard interface itself, while the Web Player/API remains on the normal
+container network interface.
 
-```bash
-WIREGUARD_PRIVATE_KEY=... WIREGUARD_ADDRESSES=10.2.0.2/32 IPADDRESS=<your-LAN-IP> \
-  docker compose -f compose.vpn.yaml up -d
+Set:
+
+```env
+STREMIOSRV_BT_INTERFACE=stremio-test
+STREMIOSRV_WIREGUARD_HOST_PATH=/root/stremio.conf
 ```
 
-Notes:
-- The VPN's **kill-switch** is on by default — if the tunnel drops, torrent traffic stops (no IP leak).
-- **Inbound peers / seeding** need a provider that supports **port-forwarding** (e.g. ProtonVPN, PIA,
-  AirVPN). Without it you still stream, but with outbound-only connectivity.
-- Set `FIREWALL_OUTBOUND_SUBNETS` to your LAN CIDR(s) so the player and admin stay reachable.
+and make the client configuration available on the host at `/root/stremio.conf`.
+
+The configuration can still contain a full-tunnel WireGuard peer definition such as:
+
+```ini
+[Interface]
+Address = 10.7.0.4/24
+
+[Peer]
+AllowedIPs = 0.0.0.0/0, ::/0
+```
+
+The container deliberately disables `wg-quick`'s automatic default-route installation and installs
+its own policy route. Only sockets bound by libtorrent to `stremio-test` use the tunnel.
+
+This gives the deployment the following split:
+
+```text
+Web/API
+  -> eth0 -> server's normal public IP
+
+BitTorrent
+  -> stremio-test -> WireGuard -> VPN public IP
+```
+
+The implementation also includes a fail-closed route for the BitTorrent source address. If WireGuard
+goes down, torrent traffic is blocked instead of falling back to `eth0`.
+
+**Inbound peers:** inbound BitTorrent connectivity through the VPN depends on the VPN provider and
+its port-forwarding support. Outbound downloads do not require a forwarded VPN port.
 
 ---
 
@@ -188,9 +241,9 @@ Everything is a plain `-e NAME=value` environment variable:
 
 | Setting | Default | What it does |
 |---|---|---|
-| `IPADDRESS` | *(unset)* | Usado apenas pelo caminho de certificado `*.stremio.rocks`; deixe vazio no Coolify. |
-| `SERVER_URL` | *(Coolify: defina)* | URL pública usada pelo Web Player. Ex.: `https://stremio.exemplo.com`. |
-| `STREMIOSRV_CACHE_SIZE` | `10GB` no preset Coolify | Limite do cache de downloads. Ajuste no Coolify; mantenha-o acima do maior arquivo que pretende baixar. |
+| `IPADDRESS` | *(unset)* | Used only by the certificate path `*.stremio.rocks`; leave unset on Coolify. |
+| `SERVER_URL` | *(Coolify: defina)* | Public URL used by the Web Player. Ex.: `https://stremio.exemplo.com`. |
+| `STREMIOSRV_CACHE_SIZE` | `10GB` no preset Coolify | Download cache budget. Adjust it in Coolify; keep it above the largest file you expect to download. |
 | `STREMIOSRV_CACHE_EVICT_GRACE` | `1800` | Seconds a torrent stays safe from eviction after it was last served. Raise it if a player buffers long enough between range requests that the title being watched ages out. |
 | `STREMIOSRV_RESUME_RETENTION_DAYS` | `365` | How long a fast-resume record is kept for a title that has left the cache. The record carries the torrent's metadata, so re-playing an evicted title starts without fetching it from the swarm again — this only bounds the directory. A title still cached, kept, or downloading is exempt at any age. `0` keeps everything. |
 | `STREMIOSRV_TRANSCODE_GC_INTERVAL` | `60` | Seconds between transcode housekeeping passes: end encoders nobody is reading, then sweep the directories they leave behind. `transcode/` is exempt from cache eviction, so this is the only thing that reclaims it. |
@@ -199,14 +252,17 @@ Everything is a plain `-e NAME=value` environment variable:
 | `STREMIOSRV_READAHEAD_BYTES` | `268435456` (256 MiB) | Playhead buffer — bigger absorbs more swarm jitter (fewer rebuffers). |
 | `STREMIOSRV_STREAM_PIECE_TIMEOUT` | `30` | Seconds a request waits for one piece **mid-stream** before ending the stream (the player then re-requests). Raise it on a slow or thinly-peered swarm where the piece does arrive, just late — but it cuts both ways: when the piece is never coming, this is how long playback freezes before the retry that would have recovered it. |
 | `STREMIOSRV_STREAM_FIRST_PIECE_TIMEOUT` | `120` | Same, for the **first** piece of a request — a cold start: the beginning of playback, or a seek into a region nothing has downloaded yet. |
-| `STREMIOSRV_BT_LISTEN_PORT` | `6881` | BitTorrent peer port (TCP **and** UDP, IPv4 **and** IPv6). The one to forward. **If you change it, publish the *same* port** — the compose files and `docker/launch.sh` follow this var automatically; a hand-rolled `docker run` must use matching `-p <port>:<port>/tcp -p <port>:<port>/udp` (mapping to a *different* container port silently kills inbound peering). |
+| `STREMIOSRV_BT_LISTEN_PORT` | `6881` | BitTorrent peer port (TCP and UDP, IPv4 and IPv6). The one to publish/forward when inbound peering is desired. |
+| `STREMIOSRV_BT_INTERFACE` | *(empty)* | Bind libtorrent's BitTorrent sockets to this interface. Set to your WireGuard interface name (for example `stremio-test`) to route peer, DHT, uTP, and tracker traffic through the VPN. Empty preserves the normal listener. |
+| `STREMIOSRV_WIREGUARD_CONFIG` | `/etc/wireguard/stremio.conf` | Path to the WireGuard client config inside the container. |
+| `STREMIOSRV_WIREGUARD_HOST_PATH` | `/root/stremio.conf` | Host path mounted read-only as the WireGuard config. Keep private keys out of the repository. |
 | `STREMIOSRV_ENABLE_UPNP` | `true` | Ask the router to auto-forward the BitTorrent port via **UPnP** and **NAT-PMP**. `false` stops both mappers — set it when you forward the port yourself, forward nothing on purpose (LAN-only), or tunnel the server's traffic, so it stops asking the router for a mapping it does not need. Peer discovery (DHT, local service discovery) is unaffected. |
 | `STREMIOSRV_BT_MAX_CONNECTIONS` | `400` | Max peer connections. |
 | `STREMIOSRV_DOWNLOAD_RATE_LIMIT` | `0` | Cap download throughput in **bytes/sec** (`0` = unlimited). E.g. `12500000` ≈ 100 Mbit/s. |
 | `STREMIOSRV_UPLOAD_RATE_LIMIT` | `0` | Cap upload throughput in **bytes/sec** (`0` = unlimited). Handy so seeding doesn't saturate your line. |
 | `STREMIOSRV_IDLE_DOWNLOAD_RATE_LIMIT` | `1048576` (1 MiB/s) | **Cross-torrent playback priority.** While *anything* is being streamed, every *other* (idle) torrent is capped to this many bytes/sec so the torrent you're watching wins the bandwidth. `0` disables it (idle torrents compete freely). |
 | `STREMIOSRV_MAX_STREAMS` | `0` | Max **concurrent playbacks** (distinct torrents being streamed). A new play past the cap gets `503`. `0` = unlimited. |
-| `STREMIOSRV_SEED_ON_COMPLETE` | `false` no preset Coolify | Para o seeding ao concluir. `true` mantém o comportamento de cliente torrent; itens com Keep continuam protegidos. |
+| `STREMIOSRV_SEED_ON_COMPLETE` | `false` no preset Coolify | Stops seeding when the requested download completes. `true` keeps normal torrent-client seeding; pinned/Keep items remain retained. |
 | `STREMIOSRV_MAX_SEED_MINUTES` | `0` | Stop seeding this many **minutes after completion** (`0` = seed forever). Applies on top of `SEED_ON_COMPLETE`. |
 | `STREMIOSRV_EXTRA_TRACKERS` | *(empty)* | Extra trackers appended to **every** torrent (on top of the built-in defaults). Comma/space/newline-separated `udp://`/`http(s)://`/`ws(s)://` URLs. |
 | `STREMIOSRV_TRACKER_LIST_URL` | *(empty)* | Optional URL of a community tracker list (e.g. the raw [ngosang/trackerslist](https://github.com/ngosang/trackerslist) `trackers_best.txt`). Fetched in a **background thread** to keep the list current — best-effort, **never blocks startup or playback**; offline falls back to the last cached list, then the built-in defaults. Empty = fully static. |
@@ -254,8 +310,8 @@ stay on the page, because the addon protocol has no way to express an action.
 
 **Installing it — four steps:**
 
-1. No preset do Coolify, `STREMIOSRV_LIBRARY_UI=true` já vem habilitado.
-2. Abra **`https://<seu-domínio>/library/`** e entre com sua conta Stremio.
+1. In the Coolify preset, `STREMIOSRV_LIBRARY_UI=true` is already enabled.
+2. Open **`https://<your-domain>/library/`** and sign in with your Stremio account.
 3. At the top of that page, under **"Watch this library in Stremio"**, press **Copy**. That
    gives you a URL of the shape
    `https://<seu-domínio>/library/addon/<token>/manifest.json` — the token is unique to your
