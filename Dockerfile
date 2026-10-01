@@ -18,7 +18,9 @@ COPY src ./src
 COPY docker ./docker
 
 # Pin Python 3.12: libtorrent 2.0.11 publishes cp312/cp313 wheels and the project requires >=3.12.
-RUN uv sync --no-dev --python 3.12 && chmod +x docker/entrypoint.sh docker/launch.sh
+RUN uv sync --no-dev --python 3.12 \
+    && chmod +x docker/entrypoint.sh docker/launch.sh docker/patch-nginx-library-auth.sh \
+    && docker/patch-nginx-library-auth.sh
 
 ENV STREMIOSRV_CACHE_ROOT=/root/.stremio-server
 ENV PATH="/srv/app/.venv/bin:${PATH}"
