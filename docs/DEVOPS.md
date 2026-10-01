@@ -86,6 +86,9 @@ Sizes and rates accept units (`64GiB`, `512MiB`) as well as plain byte counts. `
 | `STREMIOSRV_RESUME_RETENTION_DAYS` | `365` | days an *unclaimed* fast-resume record is kept (0 = forever) |
 | `STREMIOSRV_BT_MAX_CONNECTIONS` | `400` | libtorrent connection cap |
 | `STREMIOSRV_TRANSCODE_PROFILE` | autodetect | force a HW profile |
+| `STREMIOSRV_SEED_ON_COMPLETE` | `false` in the Coolify preset | stop seeding when a requested download completes; pinned/kept items are handled by the pin policy |
+| `STREMIOSRV_LIBRARY_UI` | `true` in the Coolify preset | enable the authenticated Library UI at `/library/` |
+| `STREMIOSRV_ENABLE_UPNP` | `false` in the Coolify preset | disable UPnP/NAT-PMP; expose 6881 TCP+UDP explicitly when inbound BitTorrent is desired |
 | `STREMIOSRV_LIBRARY_ADDON_ALLOW` | *(unset)* | CIDRs that count as the home network: they may reach the library addon, and `/proxy` fetches any address but a link-local or cloud-metadata one for them, and only public ones for anyone else or for a web page on another site — a page opened on an IP address in these ranges, or on the server's host or `SERVER_URL`'s, counts as the server's own (default: private ranges + CGNAT). Behind a reverse proxy, or when Docker forwards IPv6 clients into an IPv4-only container, clients arrive from a local address — list your LAN ranges explicitly |
 
 ### Coolify — Git-based Docker Compose
@@ -113,6 +116,8 @@ The Compose file also enables the Library UI, sets a 10 GB cache budget and disa
 completion by default. Override these values through Coolify environment variables when needed.
 `SERVER_URL` can follow Coolify's generated `SERVICE_URL_STREMIO_LIBTORRENT_SERVER_8080` value, or
 you can set `SERVER_URL` explicitly.
+
+For Coolify deployment, use [`COOLIFY.md`](COOLIFY.md). The repository Compose preset is intentionally configured for that deployment model; the generic application defaults in `src/stremiosrv/config.py` remain available for non-Compose deployments.
 
 ### Web player (all-in-one)
 The image bundles the Stremio **web player** and serves it on the same origin as the streaming API
