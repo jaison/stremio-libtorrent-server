@@ -27,15 +27,16 @@ services:
       # Leave IPADDRESS empty on reverse-proxy platforms such as Coolify. In that mode HTTPS is
       # terminated by the platform proxy and SERVER_URL is the public origin.
       IPADDRESS: ${IPADDRESS:-}
-      # Coolify can generate SERVICE_URL_* from the service's configured domain. SERVER_URL therefore
-      # follows that domain automatically, while plain Docker can override it explicitly.
-      SERVICE_URL_STREMIO_LIBTORRENT_SERVER_8080: ${SERVICE_URL_STREMIO_LIBTORRENT_SERVER_8080:-}
-      SERVER_URL: ${SERVER_URL:-${SERVICE_URL_STREMIO_LIBTORRENT_SERVER_8080}}
+      # Public origin used by the bundled Stremio web player. Set this in Coolify to the domain
+      # configured for the 8080 service, e.g. https://stremio.example.com.
+      SERVER_URL: ${SERVER_URL:-}
 
       # Recommended library deployment settings.
       STREMIOSRV_CACHE_SIZE: "${STREMIOSRV_CACHE_SIZE:-10GB}"
       STREMIOSRV_LIBRARY_UI: "${STREMIOSRV_LIBRARY_UI:-true}"
       STREMIOSRV_SEED_ON_COMPLETE: "${STREMIOSRV_SEED_ON_COMPLETE:-false}"
+      # Coolify/cloud hosts do not need UPnP/NAT-PMP. Publish 6881 explicitly instead.
+      STREMIOSRV_ENABLE_UPNP: "${STREMIOSRV_ENABLE_UPNP:-false}"
 
     # Internal ports. Coolify routes the public domain to 8080; the API ports stay private.
     expose:
