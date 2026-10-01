@@ -15,10 +15,18 @@ services:
     build: .
     image: stremio-libtorrent-server:latest
     restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
 
     environment:
       # BitTorrent peer port inside the container. The published port below follows it automatically.
       STREMIOSRV_BT_LISTEN_PORT: "${STREMIOSRV_BT_LISTEN_PORT:-6881}"
+      # Optional BitTorrent-only WireGuard split tunnel. Set the interface name (e.g. stremio-test).
+      # When enabled, startup fails closed if the WireGuard config is missing.
+      STREMIOSRV_BT_INTERFACE: "${STREMIOSRV_BT_INTERFACE:-}"
+      STREMIOSRV_WIREGUARD_CONFIG: "${STREMIOSRV_WIREGUARD_CONFIG:-/etc/wireguard/stremio.conf}"
 
       # Application data, cache, certificates, labels and fast-resume all live here.
       STREMIOSRV_CACHE_ROOT: /root/.stremio-server
@@ -54,6 +62,8 @@ services:
       # Compose-owned persistent storage. Coolify displays this mount as Persistent Storage.
       # STREMIO_DATA_DIR can still replace the named volume with a server path for plain Docker.
       - ${STREMIO_DATA_DIR:-stremio-cache}:/root/.stremio-server
+      # WireGuard client config is supplied by the host and never committed to Git.
+      - ${STREMIOSRV_WIREGUARD_HOST_PATH:-/root/stremio.conf}:/etc/wireguard/stremio.conf:ro
 
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:11470/health"]
