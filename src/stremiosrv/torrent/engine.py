@@ -1,7 +1,7 @@
 """libtorrent session wrapper.
 
-The key capability vs the stock Stremio server: it **listens for inbound peers**
-(`listen_interfaces = 0.0.0.0:<port>`) and downloads **sequentially** (head-first) so the
+The key capability vs the stock Stremio server: it **listens for inbound peers** and downloads
+**sequentially** (head-first) so the
 playhead region arrives before the rest of the file.
 
 Targets libtorrent 2.0.x (python bindings).
@@ -623,11 +623,16 @@ class Engine:
                  prefetch_next_max_bytes: int = 134_217_728,
                  prefetch_trigger_fraction: float = 0.90,
                  dht_bootstrap_nodes: str = "",
-                 enable_upnp: bool = True) -> None:  # auto router port-map (UPnP + NAT-PMP)
+                 enable_upnp: bool = True,
+                 bt_interface: str = "") -> None:  # auto router port-map (UPnP + NAT-PMP)
         _settings = {
-            # INBOUND listener (stock server lacks this) — dual-stack so IPv6 peers can reach us too;
-            # a host without IPv6 just fails that bind and keeps IPv4 (libtorrent degrades gracefully).
-            "listen_interfaces": f"0.0.0.0:{listen_port},[::]:{listen_port}",
+            # INBOUND listener (stock server lacks this) — dual-stack by default. When bt_interface is
+            # set, libtorrent uses that device for TCP peer sockets and UDP/DHT/tracker sockets;
+            # source-policy routing is installed by the container entrypoint.
+            "listen_interfaces": (
+                f"{bt_interface}:{listen_port}" if bt_interface else
+                f"0.0.0.0:{listen_port},[::]:{listen_port}"
+            ),
             "enable_dht": True,
             "enable_lsd": True,
             "enable_upnp": enable_upnp,
@@ -654,6 +659,8 @@ class Engine:
             "announce_to_all_tiers": True,
             "allow_multiple_connections_per_ip": True,
         }
+        if bt_interface:
+            _settings["outgoing_interfaces"] = bt_interface
         # Optional operator-chosen DHT entry points, so nobody is obliged to depend on the
         # built-in routers. Unset keeps libtorrent's defaults.
         _boot = dht_state.bootstrap_setting(dht_bootstrap_nodes)
