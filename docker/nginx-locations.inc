@@ -5,10 +5,10 @@ index index.html;
 
 proxy_http_version 1.1;
 proxy_set_header Host $http_host;
-# When this nginx sits behind a TLS-terminating reverse proxy (for example Easypanel), the
-# original scheme arrives in X-Forwarded-Proto. Preserve only the two valid schemes; direct
-# requests without the header fall back to nginx's own scheme.
-proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+# When this nginx sits behind a TLS-terminating reverse proxy (for example Easypanel), preserve
+# its original HTTP/HTTPS scheme. nginx-allinone.conf validates the header and falls back to
+# the local scheme for direct requests.
+proxy_set_header X-Forwarded-Proto $client_proto;
 # The addon judges the CLIENT's address, and without this every proxied request arrives as
 # nginx's own loopback address -- a LAN check that inspects the proxy passes everything.
 proxy_set_header X-Forwarded-For $remote_addr;
@@ -56,7 +56,7 @@ location ^~ /proxy/            { proxy_pass http://127.0.0.1:11470; }
 # Library download UI (opt-in, off unless STREMIOSRV_LIBRARY_UI). Prefix, not exact: the page AND
 # its API both live under here, and uvicorn 404s the whole tree when the flag is off — so this
 # line is inert rather than wrong on a server that has not enabled it. It must come before the
-# `location /` fallback, or /library would be served as the web player's index.html.
+# `location /` fallback, or /library would be served as the web-player index.html.
 location ^~ /library           { proxy_pass http://127.0.0.1:11470; }
 
 # --- the web player's own files; everything else is a counted 404 ---
