@@ -17,6 +17,7 @@ continue seeding.
 - **📺 Integrated Web Player.** Stremio Web runs on the same public domain configured in Coolify.
 - **📚 Library UI enabled.** Download titles before watching, track episodes, and use **Keep** to protect them from cache eviction.
 - **💾 Controlled cache.** The Coolify preset starts with `STREMIOSRV_CACHE_SIZE=10GB`.
+- **📌 Keep uses actual disk requirements.** Keeping a title only reserves the bytes still needed to complete the pinned download; it no longer requires the entire cache budget plus headroom to remain free. Ordinary cache data can be evicted to make room.
 - **🛑 No automatic seeding.** `STREMIOSRV_SEED_ON_COMPLETE=false` in the preset; Keep is the explicit action for retained titles.
 - **🔐 BitTorrent-only WireGuard.** BitTorrent traffic can be forced through a WireGuard interface while the Web/API path stays on the normal network interface, with a fail-closed route.
 - **⚡ Open libtorrent engine.** Inbound peers, playhead-aware piece fetching, DHT, trackers, and fine-grained torrent control.
@@ -83,6 +84,16 @@ stremio-cache:/root/.stremio-server
 ```
 
 No manual storage mount is required in the panel.
+
+### Keep and disk space
+
+**Keep** is a retention action, not a request to reserve the whole cache budget. The disk guard checks the
+bytes still required by the title being kept (plus any bytes still required by other incomplete Keep items).
+It does **not** require the configured `STREMIOSRV_CACHE_SIZE` to remain completely free.
+
+This means a small film can be kept even when the server has an active cache. For example, a 3 GB title
+can be kept with 26 GB of free disk; the existing cache may be evicted as needed, while the pinned title
+remains protected from eviction.
 
 ### 5. BitTorrent
 
