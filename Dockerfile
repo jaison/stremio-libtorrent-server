@@ -6,7 +6,7 @@ FROM tsaridas/stremio-docker:latest
 # The entrypoint generates a self-signed TLS certificate when no trusted certificate is provided.
 # The upstream image does not install the openssl CLI explicitly.
 # curl is required by the Docker HEALTHCHECK below.
-RUN apk add --no-cache openssl curl
+RUN apk add --no-cache openssl curl wireguard-tools
 
 # uv (standalone binary; brings its own Python toolchain)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
