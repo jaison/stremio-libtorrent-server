@@ -3,6 +3,10 @@
 # build natively on ARM64 hosts without the GPU-specific amd64-only base used previously.
 FROM tsaridas/stremio-docker:latest
 
+# The entrypoint generates a self-signed TLS certificate when no trusted certificate is provided.
+# The upstream image does not install the openssl CLI explicitly.
+RUN apk add --no-cache openssl
+
 # uv (standalone binary; brings its own Python toolchain)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
