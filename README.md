@@ -1,97 +1,109 @@
 # 🎬 stremio-libtorrent-server
 
-### Your own Stremio streaming server — open, fast, and *yours*. One command to run it. 🚀
+### Seu servidor Stremio pessoal, com armazenamento local persistente e controle sobre o torrent.
 
-Self-host the **complete Stremio experience** — the **web player** *and* a powerful, open
-**BitTorrent streaming engine** — in a single container on your own hardware. It's a **full torrent
-client**, not just a streamer: it downloads whole files and can **pin favorites to keep & seed**.
-Point any Stremio client (browser, Android TV, Tizen, webOS, desktop) at it and press play.
+Este fork é preparado principalmente para **Coolify**: o Web Player, a Library UI e o motor
+BitTorrent rodam no mesmo container, com volume persistente e configuração declarativa em
+`compose.yaml`.
 
-No subscription. No tracking. No black box. **100% free and open — our gift to the community.** 💛
+É um **cliente torrent completo**, não apenas um streamer: pode baixar arquivos para o servidor,
+manter títulos escolhidos com **Keep** e reproduzi-los pelo Stremio. No preset deste fork, downloads
+terminados **não continuam em seeding automaticamente**; itens marcados como Keep continuam sendo
+mantidos e podem continuar compartilhando.
 
-> **Sharing back with the community. 💛** This is a real torrent client, so a title you started keeps
-> **downloading to completion and seeding (uploading) back to other Stremio users** even after you
-> close the player — that's how you help keep the swarm fast and healthy **for everyone**. Unpinned
-> titles are cleared automatically; **pin** the ones you'd like to keep sharing. Prefer to limit it?
-> Cap up/down bandwidth in the settings any time — your box, your call.
+## ✨ O que este fork entrega
 
-[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-androshack%2Fstremio--libtorrent--server-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/androshack/stremio-libtorrent-server)
-[![License: MIT](https://img.shields.io/badge/License-MIT-3DA639.svg)](LICENSE)
+- **☁️ Pronto para Coolify.** O `compose.yaml` define serviço, volume persistente, healthcheck e a porta BitTorrent.
+- **📺 Web Player integrado.** O Stremio Web roda no mesmo domínio configurado no Coolify.
+- **📚 Library UI habilitada.** Baixe títulos antes de assistir, acompanhe episódios e use **Keep** para protegê-los da limpeza do cache.
+- **💾 Cache controlado.** O preset começa com `STREMIOSRV_CACHE_SIZE=10GB`.
+- **🛑 Sem seeding automático.** `STREMIOSRV_SEED_ON_COMPLETE=false` no preset; Keep é a ação explícita para manter um item.
+- **⚡ libtorrent aberto.** Inbound peers, download sequencial orientado ao playhead e controle fino do comportamento.
+- **🖥️ Transcode opcional.** CPU por padrão, com VAAPI/NVENC quando o host/container fornecer a aceleração.
+
+## 🚀 Quick Start — Coolify
+
+Use o **Docker Compose** diretamente deste repositório.
+
+### 1. Criar a aplicação
+
+Em um projeto do Coolify, crie uma aplicação a partir de:
+
+```text
+jaison/stremio-libtorrent-server
+branch: main
+Build Pack: Docker Compose
+Compose: /compose.yaml
+Base Directory: /
+```
+
+### 2. Domínio
+
+Associe seu domínio à porta interna **8080**:
+
+```text
+https://stremio.seudominio.com  →  8080
+```
+
+O HTTPS externo é terminado pelo proxy do Coolify.
+
+### 3. Environment Variables
+
+O `compose.yaml` já traz os defaults deste fork. No Coolify, defina apenas o domínio público:
+
+```env
+SERVER_URL=https://stremio.seudominio.com
+```
+
+Os defaults são:
+
+```env
+STREMIOSRV_CACHE_SIZE=10GB
+STREMIOSRV_LIBRARY_UI=true
+STREMIOSRV_SEED_ON_COMPLETE=false
+STREMIOSRV_ENABLE_UPNP=false
+```
+
+Não configure `IPADDRESS` no Coolify.
+
+### 4. Storage
+
+O volume persistente já está declarado no Compose:
+
+```yaml
+stremio-cache:/root/.stremio-server
+```
+
+Não é necessário criar esse mount manualmente no painel.
+
+### 5. BitTorrent
+
+O Compose publica:
+
+```text
+6881/TCP
+6881/UDP
+```
+
+Essas portas permitem inbound peers. Playback e downloads também funcionam sem inbound.
+
+### 6. Abrir
+
+Depois do deploy:
+
+```text
+https://stremio.seudominio.com/
+https://stremio.seudominio.com/library/
+```
+
+Para a configuração completa do Coolify, veja [`docs/COOLIFY.md`](docs/COOLIFY.md).
 
 ---
 
-## ✨ Why you'll love it
+### Docker fora do Coolify
 
-- **🚀 Install in one command.** `docker run …` — that's the whole setup. No building, no config files.
-- **📺 Just works on TVs.** Automatic **trusted HTTPS** (a real Let's Encrypt cert) that smart TVs actually accept — zero certificate headaches.
-- **⚡ Faster, more reliable.** Unlike the closed stock server, this one **accepts inbound peers** and fetches **playhead-first**, so streams start quicker and hold up on thin swarms.
-- **🎛️ Truly yours to control.** Real dials for cache, buffering, peers, and transcode — tune deeply, or never touch a thing.
-- **🖥️ Hardware transcode, optional.** Intel **VAAPI** / NVIDIA **NVENC** when you expose a GPU to the container (opt-in — see [Advanced](#-advanced--tune-it-your-way)), with graceful CPU fallback — and a missing GPU never stops it from starting.
-- **🧩 Your addons, your choice.** It's **neutral infrastructure**: it streams whatever a Stremio addon hands it. It bundles no content and is not a source.
-- **📚 A real torrent client, if you want one.** Turn on the optional library page and the server stops being a passthrough: queue a download before you sit down, see which episodes of a pack are actually on the disk, and keep the ones you want protected from the cache evictor — and it seeds what it keeps, like any decent client should. It also publishes itself as a Stremio addon, so what is on the box shows up as a row on your board and as a "play the local copy" entry beside every other source — on your LAN only, and off unless you turn the library on — see [Watch your library inside Stremio](#watch-your-library-inside-stremio) for the four steps. Off by default; set `STREMIOSRV_LIBRARY_UI=true` to try it.
-- **🔓 Open source.** Read it, change it, trust it.
-
----
-
-## 🚀 Quick Start — anyone can do this
-
-> **Architecture:** the published image is **`linux/amd64` (x86-64) only**. It runs on any normal
-> PC/server/NAS. ARM hosts (Raspberry Pi, most ARM TV boxes, Apple Silicon) aren't supported by the
-> prebuilt image — build from source on those.
-
-**1.** Install [Docker](https://docs.docker.com/get-docker/).
-**2.** Copy **one** command below — whichever matches your hardware — and replace `YOUR_SERVER_IP`
-with your machine's LAN IP (e.g. `192.168.1.50`). **Not sure which? Use the first one — it works on
-everything.** *(The GPU options only speed up the occasional video that needs converting; they're not required.)*
-
-**💻 No GPU — works everywhere (start here)**
-```sh
-docker run -d --name stremio --restart unless-stopped \
-  -e IPADDRESS=YOUR_SERVER_IP \
-  -p 8080:8080 -p 12470:12470 -p 6881:6881/tcp -p 6881:6881/udp \
-  -v stremio-data:/root/.stremio-server \
-  androshack/stremio-libtorrent-server
-```
-
-**🟦 Intel / AMD GPU (VAAPI)** — same, plus `--device /dev/dri`
-```sh
-docker run -d --name stremio --restart unless-stopped \
-  -e IPADDRESS=YOUR_SERVER_IP \
-  --device /dev/dri:/dev/dri \
-  -p 8080:8080 -p 12470:12470 -p 6881:6881/tcp -p 6881:6881/udp \
-  -v stremio-data:/root/.stremio-server \
-  androshack/stremio-libtorrent-server
-```
-
-**🟩 NVIDIA GPU (NVENC)** — plus `--gpus all` (first install the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) on the host)
-```sh
-docker run -d --name stremio --restart unless-stopped \
-  -e IPADDRESS=YOUR_SERVER_IP \
-  --gpus all \
-  -p 8080:8080 -p 12470:12470 -p 6881:6881/tcp -p 6881:6881/udp \
-  -v stremio-data:/root/.stremio-server \
-  androshack/stremio-libtorrent-server
-```
-
-**🟦🟩 Both Intel + NVIDIA** — both flags
-```sh
-docker run -d --name stremio --restart unless-stopped \
-  -e IPADDRESS=YOUR_SERVER_IP \
-  --gpus all --device /dev/dri:/dev/dri \
-  -p 8080:8080 -p 12470:12470 -p 6881:6881/tcp -p 6881:6881/udp \
-  -v stremio-data:/root/.stremio-server \
-  androshack/stremio-libtorrent-server
-```
-
-**3.** Open it:
-- 🌐 **In a browser (same network):** `http://YOUR_SERVER_IP:8080` — *browser playback covers MP4/H.264; for MKV/HEVC content use the **desktop or TV** apps (browsers can't decode those).*
-- 🔒 **Trusted HTTPS (and TVs):** run `docker logs stremio` and use the printed URL — **it looks like**
-  `https://192-168-1-50.519b6502d940.stremio.rocks:12470` *(replace `192-168-1-50` with your internal IP, dots written as dashes)*.
-
-Sign into Stremio, add your addons, press play. 🍿
-*(Prefer a file? Grab [`compose.hub.yaml`](compose.hub.yaml) → `IPADDRESS=YOUR_SERVER_IP docker compose -f compose.hub.yaml up -d`.)*
-
----
+O projeto continua compatível com Docker Compose convencional e com os overlays de GPU.
+A configuração principal permanece em [`compose.yaml`](compose.yaml).
 
 ## 🧰 Minimum hardware
 
@@ -176,9 +188,9 @@ Everything is a plain `-e NAME=value` environment variable:
 
 | Setting | Default | What it does |
 |---|---|---|
-| `IPADDRESS` | *(unset)* | Your server IP → auto **trusted TV cert** via `*.stremio.rocks`. Unset → self-signed. |
-| `SERVER_URL` | auto | URL the web player targets. Set for a custom domain. `/proxy` also counts a web page on this host, at any port, as the server's own. |
-| `STREMIOSRV_CACHE_SIZE` | `19327352832` (18 GiB) | Download-cache budget in bytes (LRU-evicted). Keep it **above your largest file**. |
+| `IPADDRESS` | *(unset)* | Usado apenas pelo caminho de certificado `*.stremio.rocks`; deixe vazio no Coolify. |
+| `SERVER_URL` | *(Coolify: defina)* | URL pública usada pelo Web Player. Ex.: `https://stremio.exemplo.com`. |
+| `STREMIOSRV_CACHE_SIZE` | `10GB` no preset Coolify | Limite do cache de downloads. Ajuste no Coolify; mantenha-o acima do maior arquivo que pretende baixar. |
 | `STREMIOSRV_CACHE_EVICT_GRACE` | `1800` | Seconds a torrent stays safe from eviction after it was last served. Raise it if a player buffers long enough between range requests that the title being watched ages out. |
 | `STREMIOSRV_RESUME_RETENTION_DAYS` | `365` | How long a fast-resume record is kept for a title that has left the cache. The record carries the torrent's metadata, so re-playing an evicted title starts without fetching it from the swarm again — this only bounds the directory. A title still cached, kept, or downloading is exempt at any age. `0` keeps everything. |
 | `STREMIOSRV_TRANSCODE_GC_INTERVAL` | `60` | Seconds between transcode housekeeping passes: end encoders nobody is reading, then sweep the directories they leave behind. `transcode/` is exempt from cache eviction, so this is the only thing that reclaims it. |
@@ -194,7 +206,7 @@ Everything is a plain `-e NAME=value` environment variable:
 | `STREMIOSRV_UPLOAD_RATE_LIMIT` | `0` | Cap upload throughput in **bytes/sec** (`0` = unlimited). Handy so seeding doesn't saturate your line. |
 | `STREMIOSRV_IDLE_DOWNLOAD_RATE_LIMIT` | `1048576` (1 MiB/s) | **Cross-torrent playback priority.** While *anything* is being streamed, every *other* (idle) torrent is capped to this many bytes/sec so the torrent you're watching wins the bandwidth. `0` disables it (idle torrents compete freely). |
 | `STREMIOSRV_MAX_STREAMS` | `0` | Max **concurrent playbacks** (distinct torrents being streamed). A new play past the cap gets `503`. `0` = unlimited. |
-| `STREMIOSRV_SEED_ON_COMPLETE` | `true` | Keep seeding after a torrent finishes (full torrent-client behaviour). `false` = **stop seeding + drop peers** the moment it completes. Pinned items always keep seeding. |
+| `STREMIOSRV_SEED_ON_COMPLETE` | `false` no preset Coolify | Para o seeding ao concluir. `true` mantém o comportamento de cliente torrent; itens com Keep continuam protegidos. |
 | `STREMIOSRV_MAX_SEED_MINUTES` | `0` | Stop seeding this many **minutes after completion** (`0` = seed forever). Applies on top of `SEED_ON_COMPLETE`. |
 | `STREMIOSRV_EXTRA_TRACKERS` | *(empty)* | Extra trackers appended to **every** torrent (on top of the built-in defaults). Comma/space/newline-separated `udp://`/`http(s)://`/`ws(s)://` URLs. |
 | `STREMIOSRV_TRACKER_LIST_URL` | *(empty)* | Optional URL of a community tracker list (e.g. the raw [ngosang/trackerslist](https://github.com/ngosang/trackerslist) `trackers_best.txt`). Fetched in a **background thread** to keep the list current — best-effort, **never blocks startup or playback**; offline falls back to the last cached list, then the built-in defaults. Empty = fully static. |
