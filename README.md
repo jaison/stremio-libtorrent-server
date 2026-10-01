@@ -38,12 +38,12 @@ Compose: /compose.yaml
 Base Directory: /
 ```
 
-### 2. Domínio
+### 2. Domain
 
 Point your public domain to the internal **8080** port:
 
 ```text
-https://stremio.seudominio.com  →  8080
+https://stremio.example.com  →  8080
 ```
 
 Coolify terminates the external HTTPS connection.
@@ -112,15 +112,15 @@ The WireGuard config is mounted read-only from the host and should never be comm
 After deployment:
 
 ```text
-https://stremio.seudominio.com/
-https://stremio.seudominio.com/library/
+https://stremio.example.com/
+https://stremio.example.com/library/
 ```
 
 For the complete Coolify setup, see [`docs/COOLIFY.md`](docs/COOLIFY.md).
 
 ---
 
-### Docker fora do Coolify
+### Docker outside Coolify
 
 The project also works with conventional Docker Compose and the GPU overlays.
 The main configuration remains in [`compose.yaml`](compose.yaml).
@@ -135,7 +135,7 @@ It's light — direct play (most content) barely touches the CPU; the GPU only m
 | **RAM** | 1 GB | 2 GB+ | Engine + buffers + nginx; transcoding adds ~0.5–1 GB. |
 | **Disk** | ~3 GB + cache | SSD, cache ≥ largest file | Image size depends on the base; download cache defaults to **10GB** (tune with `STREMIOSRV_CACHE_SIZE`). Keep free space ≥ your biggest single file. |
 | **GPU** | none | Intel VAAPI / NVIDIA NVENC | Optional — only speeds up transcoding; a missing/broken GPU never blocks startup. |
-| **Network** | any | wired + `6881` forwarded | Wired beats Wi-Fi for 4K; forward port `6881` for the full swarm (see below). |
+| **Network** | any | wired + suitable peer connectivity | Wired beats Wi-Fi for sustained 4K playback. |
 
 ---
 
@@ -314,7 +314,7 @@ stay on the page, because the addon protocol has no way to express an action.
 2. Open **`https://<your-domain>/library/`** and sign in with your Stremio account.
 3. At the top of that page, under **"Watch this library in Stremio"**, press **Copy**. That
    gives you a URL of the shape
-   `https://<seu-domínio>/library/addon/<token>/manifest.json` — the token is unique to your
+   `https://<your-domain>/library/addon/<token>/manifest.json` — the token is unique to your
    server, and the URL **must end in `/manifest.json`**.
 4. In Stremio: **Addons → Add addon**, paste, install.
 
