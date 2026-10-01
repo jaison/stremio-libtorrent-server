@@ -1,11 +1,14 @@
-# Shared server body: serve the Stremio web build, proxy the streaming API to uvicorn.
+# Shared server body: serve the Stremio web player AND proxies the streaming API to uvicorn.
 # Included by both the HTTP (:8080) and HTTPS (:12470) server blocks in nginx-allinone.conf.
 root /srv/stremio-server/build;
 index index.html;
 
 proxy_http_version 1.1;
 proxy_set_header Host $http_host;
-proxy_set_header X-Forwarded-Proto $scheme;
+# When this nginx sits behind a TLS-terminating reverse proxy (for example Easypanel), the
+# original scheme arrives in X-Forwarded-Proto. Preserve only the two valid schemes; direct
+# requests without the header fall back to nginx's own scheme.
+proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
 # The addon judges the CLIENT's address, and without this every proxied request arrives as
 # nginx's own loopback address -- a LAN check that inspects the proxy passes everything.
 proxy_set_header X-Forwarded-For $remote_addr;
@@ -45,7 +48,7 @@ location ^~ /hlsv2/            { proxy_pass http://127.0.0.1:11470; }
 # wrongly proxy to uvicorn -> the SPA never boots (blank page). Keep these as static.
 # `create` is the POST the player sends before streaming a stream with `sources` or no fileIdx,
 # and -1 the index stremio-core writes for the latter; both used to land on index.html (405/200).
-location ~ "^/[0-9a-fA-F]{40}/(-1|[0-9]+|stats\.json|remove|create)" { proxy_pass http://127.0.0.1:11470; }
+location ~ "^/[0-9a-fA-F]{40}/(-1|[0-9]+|stats\\.json|remove|create)" { proxy_pass http://127.0.0.1:11470; }
 # The stock proxy for addon HTTP streams that need request headers (stremio-video routes a stream
 # through it when the addon sets behaviorHints.proxyHeaders). A bare proxy_pass forwards the URI as
 # sent: the destination rides percent-encoded in the path and must reach the app still encoded.
@@ -71,7 +74,7 @@ location @unmatched {
     proxy_set_header X-Forwarded-For "";
     proxy_set_header X-Original-Method $request_method;
     proxy_set_header X-Original-URI $request_uri;
-    # The trailing `?` drops the original query string; /_unmatched takes the request from the
+    # The trailing ? drops the original query string; /_unmatched takes the request from the
     # headers above.
     rewrite ^ /_unmatched? break;
     proxy_pass http://127.0.0.1:11470;
