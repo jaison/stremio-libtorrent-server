@@ -88,6 +88,32 @@ Sizes and rates accept units (`64GiB`, `512MiB`) as well as plain byte counts. `
 | `STREMIOSRV_TRANSCODE_PROFILE` | autodetect | force a HW profile |
 | `STREMIOSRV_LIBRARY_ADDON_ALLOW` | *(unset)* | CIDRs that count as the home network: they may reach the library addon, and `/proxy` fetches any address but a link-local or cloud-metadata one for them, and only public ones for anyone else or for a web page on another site — a page opened on an IP address in these ranges, or on the server's host or `SERVER_URL`'s, counts as the server's own (default: private ranges + CGNAT). Behind a reverse proxy, or when Docker forwards IPv6 clients into an IPv4-only container, clients arrive from a local address — list your LAN ranges explicitly |
 
+### Coolify — Git-based Docker Compose
+
+The repository's `compose.yaml` is prepared for a Coolify Docker Compose Application. Create the
+application from this repository, select **Docker Compose**, keep the base directory at the repository
+root and use `compose.yaml` as the Compose file.
+
+For the `stremio-libtorrent-server` component, configure its public domain to the **internal port
+8080**. Do not publish 8080, 11470 or 12470 with Docker `ports:`; the Compose file exposes those
+ports internally and Coolify's proxy routes the configured domain to 8080. The only published port is
+the BitTorrent peer port 6881/TCP+UDP, because it is the direct inbound peer listener.
+
+The persistent volume is already declared as:
+
+```yaml
+volumes:
+  - stremio-cache:/root/.stremio-server
+```
+
+Coolify will show it under Persistent Storages. The Compose file is the source of truth for this
+mount, so changes should be made in Git and then the Compose configuration reloaded.
+
+The Compose file also enables the Library UI, sets a 10 GB cache budget and disables seeding after
+completion by default. Override these values through Coolify environment variables when needed.
+`SERVER_URL` can follow Coolify's generated `SERVICE_URL_STREMIO_LIBTORRENT_SERVER_8080` value, or
+you can set `SERVER_URL` explicitly.
+
 ### Web player (all-in-one)
 The image bundles the Stremio **web player** and serves it on the same origin as the streaming API
 (nginx serves the static build and reverse-proxies the API to uvicorn). A browser gets the full
