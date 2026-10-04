@@ -264,7 +264,7 @@ Everything is a plain `-e NAME=value` environment variable:
 | Setting | Default | What it does |
 |---|---|---|
 | `IPADDRESS` | *(unset)* | Used only by the certificate path `*.stremio.rocks`; leave unset on Coolify. |
-| `SERVER_URL` | *(Coolify: defina)* | Public URL used by the Web Player. Ex.: `https://stremio.exemplo.com`. |
+| `SERVER_URL` | *(Coolify: defina)* | Public URL used by the Web Player. Ex.: `https://stremio.exemplo.com`. It is the initial server URL; a different URL chosen later in the player's settings is kept. |
 | `USERNAME` | *(unset)* | Optional HTTP Basic Authentication username for the Web Player/API. Leave unset to disable Basic Auth. |
 | `PASSWORD` | *(unset)* | Optional HTTP Basic Authentication password paired with `USERNAME`. |
 | `STREMIOSRV_CACHE_SIZE` | `10GB` no preset Coolify | Download cache budget. Adjust it in Coolify; keep it above the largest file you expect to download. |

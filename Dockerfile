@@ -20,6 +20,9 @@ COPY docker ./docker
 # Pin Python 3.12: libtorrent 2.0.11 publishes cp312/cp313 wheels and the project requires >=3.12.
 RUN uv sync --no-dev --python 3.12 \
     && chmod +x docker/entrypoint.sh docker/launch.sh
+# The web player's loader seeds the streaming-server URL once and then keeps the user's pick; the
+# base image's own reverted it every 5 s. Fails the build if the web build's layout has moved.
+RUN sh docker/install-web-player-loader.sh /srv/stremio-server/build docker/web-player-loader.js
 
 ENV STREMIOSRV_CACHE_ROOT=/root/.stremio-server
 ENV PATH="/srv/app/.venv/bin:${PATH}"
